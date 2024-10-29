@@ -203,7 +203,7 @@ def encrypt(pt, rkb, rk):
 
 	# Initial Permutation
 	pt = permute(pt, initial_perm, 64)
-	print("After initial permutation", bin2hex(pt))
+	
 
 	# Splitting
 	left = pt[0:32]
@@ -234,8 +234,7 @@ def encrypt(pt, rkb, rk):
 		# Swapper
 		if(i != 15):
 			left, right = right, left
-		print("Round ", i + 1, " ", bin2hex(left),
-			" ", bin2hex(right), " ", rk[i])
+		
 
 	# Combination
 	combine = left + right
@@ -301,13 +300,47 @@ for i in range(0, 16):
 	rkb.append(round_key)
 	rk.append(bin2hex(round_key))
 
-print("Encryption")
-cipher_text = bin2hex(encrypt(pt, rkb, rk))
-print("Cipher Text : ", cipher_text)
 
-print("Decryption")
+cipher_text = bin2hex(encrypt(pt, rkb, rk))
+
+
+
 rkb_rev = rkb[::-1]
 rk_rev = rk[::-1]
 text = bin2hex(encrypt(cipher_text, rkb_rev, rk_rev))
-print("Plain Text : ", text)
+
+def pad_input(user_input, block_size=8):
+    padding_needed = block_size - (len(user_input) % block_size)
+    return user_input + ('\0' * padding_needed) if padding_needed != block_size else user_input
+
+def text_to_hex(text):
+    return ''.join(f"{ord(c):02x}" for c in text)
+
+# Konversi string heksadesimal ke teks biasa
+def hex_to_text(hex_str):
+    bytes_obj = bytes.fromhex(hex_str)
+    return bytes_obj.decode('utf-8', errors='ignore')
+
+# Fungsi enkripsi untuk teks besar
+def encryption_large_text(plain_text, key):
+    # Konversi teks ke heksadesimal sebelum dienkripsi
+    plain_text = text_to_hex(pad_input(plain_text, 8))
+    block_size = 16  # Setiap 8 karakter teks menjadi 16 karakter heksadesimal
+    encrypted_text = ""
+    for i in range(0, len(plain_text), block_size):
+        block = plain_text[i:i + block_size]
+        encrypted_block = bin2hex(encrypt(block, rkb, rk))
+        encrypted_text += encrypted_block
+    return encrypted_text
+
+# Fungsi dekripsi untuk teks besar
+def decryption_large_text(encrypted_text, key):
+    block_size = 16  # 64 bit terenkripsi dalam 16 karakter heksadesimal
+    decrypted_text = ""
+    for i in range(0, len(encrypted_text), block_size):
+        block = encrypted_text[i:i + block_size]
+        decrypted_block = encrypt(block, rkb_rev, rk_rev)  # Menggunakan kunci terbalik untuk dekripsi
+        decrypted_text += decrypted_block
+    # Mengonversi kembali dari heksadesimal ke teks biasa dan menghapus padding
+    return hex_to_text(bin2hex(decrypted_text)).strip('\0')
 
