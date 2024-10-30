@@ -1,63 +1,73 @@
-# Python3 code for the above approach
-
 # Hexadecimal to binary conversion
-
-
 def hex2bin(s):
-	mp = {'0': "0000",
-		'1': "0001",
-		'2': "0010",
-		'3': "0011",
-		'4': "0100",
-		'5': "0101",
-		'6': "0110",
-		'7': "0111",
-		'8': "1000",
-		'9': "1001",
-		'A': "1010",
-		'B': "1011",
-		'C': "1100",
-		'D': "1101",
-		'E': "1110",
-		'F': "1111"}
-	bin = ""
-	for i in range(len(s)):
-		bin = bin + mp[s[i]]
-	return bin
+    mp = {'0': "0000", '1': "0001", '2': "0010", '3': "0011",
+          '4': "0100", '5': "0101", '6': "0110", '7': "0111",
+          '8': "1000", '9': "1001", 'A': "1010", 'B': "1011",
+          'C': "1100", 'D': "1101", 'E': "1110", 'F': "1111"}
+    bin = ""
+    for i in range(len(s)):
+        bin += mp[s[i]]
+    return bin
 
 # Binary to hexadecimal conversion
-
-
 def bin2hex(s):
-	mp = {"0000": '0',
-		"0001": '1',
-		"0010": '2',
-		"0011": '3',
-		"0100": '4',
-		"0101": '5',
-		"0110": '6',
-		"0111": '7',
-		"1000": '8',
-		"1001": '9',
-		"1010": 'A',
-		"1011": 'B',
-		"1100": 'C',
-		"1101": 'D',
-		"1110": 'E',
-		"1111": 'F'}
-	hex = ""
-	for i in range(0, len(s), 4):
-		ch = ""
-		ch = ch + s[i]
-		ch = ch + s[i + 1]
-		ch = ch + s[i + 2]
-		ch = ch + s[i + 3]
-		hex = hex + mp[ch]
+    mp = {"0000": '0', "0001": '1', "0010": '2', "0011": '3',
+          "0100": '4', "0101": '5', "0110": '6', "0111": '7',
+          "1000": '8', "1001": '9', "1010": 'A', "1011": 'B',
+          "1100": 'C', "1101": 'D', "1110": 'E', "1111": 'F'}
+    hex = ""
+    for i in range(0, len(s), 4):
+        ch = s[i:i+4]
+        hex += mp[ch]
+    return hex
 
-	return hex
+# Function to permute bits according to given table
+def permute(k, arr, n):
+    permutation = ""
+    for i in range(0, n):
+        permutation = permutation + k[arr[i] - 1]
+    return permutation
 
-# Binary to decimal conversion
+# XOR function for binary strings
+def xor(a, b):
+    return ''.join('0' if a[i] == b[i] else '1' for i in range(len(a)))
 
+
+def shift_left(k, nth_shifts):
+	s = ""
+	for i in range(nth_shifts):
+		for j in range(1, len(k)):
+			s = s + k[j]
+		s = s + k[0]
+		k = s
+		s = ""
+	return k
+def generate_keys(key):
+    global rkb, rk, rkb_rev, rk_rev
+    rkb, rk = [], []
+    key = validate_key(key)  # Validate key length
+    key = hex2bin(key)
+    key = permute(key, keyp, 56)  # Permute key
+    left, right = key[:28], key[28:]  # Split into two halves
+    for i in range(16):
+        left = shift_left(left, shift_table[i])
+        right = shift_left(right, shift_table[i])
+        combine_str = permute(left + right, key_comp, 48)  # Compress key
+        rkb.append(combine_str)
+        rk.append(bin2hex(combine_str))
+    rkb_rev, rk_rev = rkb[::-1], rk[::-1]  # Reverse for decryption
+
+# Padding and helper functions
+def pad_input(user_input, block_size=8):
+    padding_needed = block_size - (len(user_input) % block_size)
+    return user_input + ('\0' * padding_needed) if padding_needed != block_size else user_input
+
+def text_to_hex(text):
+    return ''.join(f"{ord(c):02x}" for c in text)
+
+def hex_to_text(hex_str):
+    bytes_obj = bytes.fromhex(hex_str)
+    return bytes_obj.decode('utf-8', errors='ignore')
 
 def bin2dec(binary):
 
@@ -70,9 +80,6 @@ def bin2dec(binary):
 		i += 1
 	return decimal
 
-# Decimal to binary conversion
-
-
 def dec2bin(num):
 	res = bin(num).replace("0b", "")
 	if(len(res) % 4 != 0):
@@ -83,70 +90,80 @@ def dec2bin(num):
 			res = '0' + res
 	return res
 
-# Permute function to rearrange the bits
 
+# Large text encryption
+def encryption_large_text(plain_text, key):
+    generate_keys(key)  # Generate keys from key
+    plain_text = text_to_hex(pad_input(plain_text, 8))  # Pad and convert to hex
+    encrypted_text = ""
+    block_size = 16
+    for i in range(0, len(plain_text), block_size):
+        block = plain_text[i:i + block_size]
+        encrypted_text += bin2hex(encrypt(block, rkb, rk))
+    return encrypted_text
 
-def permute(k, arr, n):
-	permutation = ""
-	for i in range(0, n):
-		permutation = permutation + k[arr[i] - 1]
-	return permutation
+# Large text decryption
+def decryption_large_text(encrypted_text, key):
+    generate_keys(key)  # Generate keys for decryption
+    decrypted_text = ""
+    block_size = 16
+    for i in range(0, len(encrypted_text), block_size):
+        block = encrypted_text[i:i + block_size]
+        decrypted_text += encrypt(block, rkb_rev, rk_rev)
+    return hex_to_text(bin2hex(decrypted_text)).strip('\0')# Convert back to plain text
 
-# shifting the bits towards left by nth shifts
-
-
-def shift_left(k, nth_shifts):
-	s = ""
-	for i in range(nth_shifts):
-		for j in range(1, len(k)):
-			s = s + k[j]
-		s = s + k[0]
-		k = s
-		s = ""
-	return k
-
-# calculating xow of two strings of binary number a and b
-
-
-def xor(a, b):
-	ans = ""
-	for i in range(len(a)):
-		if a[i] == b[i]:
-			ans = ans + "0"
-		else:
-			ans = ans + "1"
-	return ans
-
-
-# Table of Position of 64 bits at initial level: Initial Permutation Table
+# Permutation tables
 initial_perm = [58, 50, 42, 34, 26, 18, 10, 2,
-				60, 52, 44, 36, 28, 20, 12, 4,
-				62, 54, 46, 38, 30, 22, 14, 6,
-				64, 56, 48, 40, 32, 24, 16, 8,
-				57, 49, 41, 33, 25, 17, 9, 1,
-				59, 51, 43, 35, 27, 19, 11, 3,
-				61, 53, 45, 37, 29, 21, 13, 5,
-				63, 55, 47, 39, 31, 23, 15, 7]
+                60, 52, 44, 36, 28, 20, 12, 4,
+                62, 54, 46, 38, 30, 22, 14, 6,
+                64, 56, 48, 40, 32, 24, 16, 8,
+                57, 49, 41, 33, 25, 17, 9, 1,
+                59, 51, 43, 35, 27, 19, 11, 3,
+                61, 53, 45, 37, 29, 21, 13, 5,
+                63, 55, 47, 39, 31, 23, 15, 7]
 
-# Expansion D-box Table
+shift_table = [1, 1, 2, 2,
+			2, 2, 2, 2,
+			1, 2, 2, 2,
+			2, 2, 2, 1]
+
+key_comp = [14, 17, 11, 24, 1, 5,
+			3, 28, 15, 6, 21, 10,
+			23, 19, 12, 4, 26, 8,
+			16, 7, 27, 20, 13, 2,
+			41, 52, 31, 37, 47, 55,
+			30, 40, 51, 45, 33, 48,
+			44, 49, 39, 56, 34, 53,
+			46, 42, 50, 36, 29, 32]
+
 exp_d = [32, 1, 2, 3, 4, 5, 4, 5,
-		6, 7, 8, 9, 8, 9, 10, 11,
-		12, 13, 12, 13, 14, 15, 16, 17,
-		16, 17, 18, 19, 20, 21, 20, 21,
-		22, 23, 24, 25, 24, 25, 26, 27,
-		28, 29, 28, 29, 30, 31, 32, 1]
+         6, 7, 8, 9, 8, 9, 10, 11,
+         12, 13, 12, 13, 14, 15, 16, 17,
+         16, 17, 18, 19, 20, 21, 20, 21,
+         22, 23, 24, 25, 24, 25, 26, 27,
+         28, 29, 28, 29, 30, 31, 32, 1]
 
-# Straight Permutation Table
 per = [16, 7, 20, 21,
-	29, 12, 28, 17,
-	1, 15, 23, 26,
-	5, 18, 31, 10,
-	2, 8, 24, 14,
-	32, 27, 3, 9,
-	19, 13, 30, 6,
-	22, 11, 4, 25]
+       29, 12, 28, 17,
+       1, 15, 23, 26,
+       5, 18, 31, 10,
+       2, 8, 24, 14,
+       32, 27, 3, 9,
+       19, 13, 30, 6,
+       22, 11, 4, 25]
 
-# S-box Table
+# Parity bit drop table (keyp)
+keyp = [57, 49, 41, 33, 25, 17, 9,
+        1, 58, 50, 42, 34, 26, 18,
+        10, 2, 59, 51, 43, 35, 27,
+        19, 11, 3, 60, 52, 44, 36,
+        63, 55, 47, 39, 31, 23, 15,
+        7, 62, 54, 46, 38, 30, 22,
+        14, 6, 61, 53, 45, 37, 29,
+        21, 13, 5, 28, 20, 12, 4]
+
+
+# S-boxes (only partial example shown for brevity)
 sbox = [[[14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7],
 		[0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8],
 		[4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0],
@@ -189,158 +206,71 @@ sbox = [[[14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7],
 
 # Final Permutation Table
 final_perm = [40, 8, 48, 16, 56, 24, 64, 32,
-			39, 7, 47, 15, 55, 23, 63, 31,
-			38, 6, 46, 14, 54, 22, 62, 30,
-			37, 5, 45, 13, 53, 21, 61, 29,
-			36, 4, 44, 12, 52, 20, 60, 28,
-			35, 3, 43, 11, 51, 19, 59, 27,
-			34, 2, 42, 10, 50, 18, 58, 26,
-			33, 1, 41, 9, 49, 17, 57, 25]
+              39, 7, 47, 15, 55, 23, 63, 31,
+              38, 6, 46, 14, 54, 22, 62, 30,
+              37, 5, 45, 13, 53, 21, 61, 29,
+              36, 4, 44, 12, 52, 20, 60, 28,
+              35, 3, 43, 11, 51, 19, 59, 27,
+              34, 2, 42, 10, 50, 18, 58, 26,
+              33, 1, 41, 9, 49, 17, 57, 25]
 
-
+# Fungsi enkripsi satu blok
 def encrypt(pt, rkb, rk):
-	pt = hex2bin(pt)
+    pt = hex2bin(pt)
 
-	# Initial Permutation
-	pt = permute(pt, initial_perm, 64)
-	
+    # Initial Permutation
+    pt = permute(pt, initial_perm, 64)
 
-	# Splitting
-	left = pt[0:32]
-	right = pt[32:64]
-	for i in range(0, 16):
-		# Expansion D-box: Expanding the 32 bits data into 48 bits
-		right_expanded = permute(right, exp_d, 48)
+    # Splitting
+    left = pt[0:32]
+    right = pt[32:64]
+    for i in range(0, 16):
+        # Expansion D-box
+        right_expanded = permute(right, exp_d, 48)
 
-		# XOR RoundKey[i] and right_expanded
-		xor_x = xor(right_expanded, rkb[i])
+        # XOR with round key
+        xor_x = xor(right_expanded, rkb[i])
 
-		# S-boxex: substituting the value from s-box table by calculating row and column
-		sbox_str = ""
-		for j in range(0, 8):
-			row = bin2dec(int(xor_x[j * 6] + xor_x[j * 6 + 5]))
-			col = bin2dec(
-				int(xor_x[j * 6 + 1] + xor_x[j * 6 + 2] + xor_x[j * 6 + 3] + xor_x[j * 6 + 4]))
-			val = sbox[j][row][col]
-			sbox_str = sbox_str + dec2bin(val)
+        # S-boxes substitution
+        sbox_str = ""
+        for j in range(0, 8):
+            row = bin2dec(int(xor_x[j * 6] + xor_x[j * 6 + 5]))
+            col = bin2dec(int(xor_x[j * 6 + 1:j * 6 + 5]))
+            val = sbox[j][row][col]
+            sbox_str += dec2bin(val)
 
-		# Straight D-box: After substituting rearranging the bits
-		sbox_str = permute(sbox_str, per, 32)
+        # Straight D-box
+        sbox_str = permute(sbox_str, per, 32)
 
-		# XOR left and sbox_str
-		result = xor(left, sbox_str)
-		left = result
+        # XOR left and sbox_str
+        result = xor(left, sbox_str)
+        left = result
 
-		# Swapper
-		if(i != 15):
-			left, right = right, left
-		
+        # Swapper
+        if i != 15:
+            left, right = right, left
 
-	# Combination
-	combine = left + right
+    # Combination
+    combine = left + right
 
-	# Final permutation: final rearranging of bits to get cipher text
-	cipher_text = permute(combine, final_perm, 64)
-	return cipher_text
+    # Final Permutation
+    cipher_text = permute(combine, final_perm, 64)
+    return cipher_text
 
+import random
 
-pt = "FACD1346FFED234A"
-key = "AABB09182736CCDD"
+def generate_valid_key():
+    # Generate a random 16-character hexadecimal string (64 bits)
+    key = ''.join(random.choices('0123456789ABCDEF', k=16))
+    
+    # Validate the generated key
+    return validate_key(key)
 
-# Key generation
-# --hex to binary
-key = hex2bin(key)
-
-# --parity bit drop table
-keyp = [57, 49, 41, 33, 25, 17, 9,
-		1, 58, 50, 42, 34, 26, 18,
-		10, 2, 59, 51, 43, 35, 27,
-		19, 11, 3, 60, 52, 44, 36,
-		63, 55, 47, 39, 31, 23, 15,
-		7, 62, 54, 46, 38, 30, 22,
-		14, 6, 61, 53, 45, 37, 29,
-		21, 13, 5, 28, 20, 12, 4]
-
-# getting 56 bit key from 64 bit using the parity bits
-key = permute(key, keyp, 56)
-
-# Number of bit shifts
-shift_table = [1, 1, 2, 2,
-			2, 2, 2, 2,
-			1, 2, 2, 2,
-			2, 2, 2, 1]
-
-# Key- Compression Table : Compression of key from 56 bits to 48 bits
-key_comp = [14, 17, 11, 24, 1, 5,
-			3, 28, 15, 6, 21, 10,
-			23, 19, 12, 4, 26, 8,
-			16, 7, 27, 20, 13, 2,
-			41, 52, 31, 37, 47, 55,
-			30, 40, 51, 45, 33, 48,
-			44, 49, 39, 56, 34, 53,
-			46, 42, 50, 36, 29, 32]
-
-# Splitting
-left = key[0:28] # rkb for RoundKeys in binary
-right = key[28:56] # rk for RoundKeys in hexadecimal
-
-rkb = []
-rk = []
-for i in range(0, 16):
-	# Shifting the bits by nth shifts by checking from shift table
-	left = shift_left(left, shift_table[i])
-	right = shift_left(right, shift_table[i])
-
-	# Combination of left and right string
-	combine_str = left + right
-
-	# Compression of key from 56 to 48 bits
-	round_key = permute(combine_str, key_comp, 48)
-
-	rkb.append(round_key)
-	rk.append(bin2hex(round_key))
-
-
-cipher_text = bin2hex(encrypt(pt, rkb, rk))
-
-
-
-rkb_rev = rkb[::-1]
-rk_rev = rk[::-1]
-text = bin2hex(encrypt(cipher_text, rkb_rev, rk_rev))
-
-def pad_input(user_input, block_size=8):
-    padding_needed = block_size - (len(user_input) % block_size)
-    return user_input + ('\0' * padding_needed) if padding_needed != block_size else user_input
-
-def text_to_hex(text):
-    return ''.join(f"{ord(c):02x}" for c in text)
-
-# Konversi string heksadesimal ke teks biasa
-def hex_to_text(hex_str):
-    bytes_obj = bytes.fromhex(hex_str)
-    return bytes_obj.decode('utf-8', errors='ignore')
-
-# Fungsi enkripsi untuk teks besar
-def encryption_large_text(plain_text, key):
-    # Konversi teks ke heksadesimal sebelum dienkripsi
-    plain_text = text_to_hex(pad_input(plain_text, 8))
-    block_size = 16  # Setiap 8 karakter teks menjadi 16 karakter heksadesimal
-    encrypted_text = ""
-    for i in range(0, len(plain_text), block_size):
-        block = plain_text[i:i + block_size]
-        encrypted_block = bin2hex(encrypt(block, rkb, rk))
-        encrypted_text += encrypted_block
-    return encrypted_text
-
-# Fungsi dekripsi untuk teks besar
-def decryption_large_text(encrypted_text, key):
-    block_size = 16  # 64 bit terenkripsi dalam 16 karakter heksadesimal
-    decrypted_text = ""
-    for i in range(0, len(encrypted_text), block_size):
-        block = encrypted_text[i:i + block_size]
-        decrypted_block = encrypt(block, rkb_rev, rk_rev)  # Menggunakan kunci terbalik untuk dekripsi
-        decrypted_text += decrypted_block
-    # Mengonversi kembali dari heksadesimal ke teks biasa dan menghapus padding
-    return hex_to_text(bin2hex(decrypted_text)).strip('\0')
+def validate_key(key):
+    if len(key) != 16:  # 16 hex characters = 64 bits
+        raise ValueError("Kunci harus terdiri dari 16 karakter heksadesimal (64 bit).")
+    for char in key:
+        if char not in '0123456789ABCDEF':
+            raise ValueError("Kunci hanya boleh mengandung karakter heksadesimal (0-9, A-F).")
+    return key
 

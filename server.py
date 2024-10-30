@@ -1,5 +1,5 @@
 import socket
-from DES import encryption_large_text, decryption_large_text
+from DES import encryption_large_text, decryption_large_text, generate_valid_key, text_to_hex, hex_to_text
 
 def server_program():
     host = socket.gethostname()
@@ -29,7 +29,11 @@ def server_program():
         response = input("Server Response: ")
         if response.lower().strip() == "bye":
             break
-        encrypted_response = encryption_large_text(response, key)
+        
+        # Convert response to hex before encrypting
+        response_hex = text_to_hex(response)  # Convert to hex format
+        encrypted_response = encryption_large_text(response_hex, key)
+        
         conn.send(encrypted_response.encode())
         print("Encrypted Response:", encrypted_response)
 
