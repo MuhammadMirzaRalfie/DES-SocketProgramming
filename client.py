@@ -29,6 +29,8 @@ def client_program():
             break
 
         decrypted_response = decryption_large_text(encrypted_response, key)
+        decrypted_response = hex_to_text(decrypted_response)
+
         print("Received Encrypted Response:", encrypted_response)
         print("Decrypted Response:", decrypted_response)
         

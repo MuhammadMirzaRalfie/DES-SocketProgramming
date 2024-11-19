@@ -22,6 +22,8 @@ def server_program():
 
         # Deskripsi pesan dengan key
         decrypted_data = decryption_large_text(encrypted_data, key)
+        decrypted_data = hex_to_text(decrypted_data)
+
         print("Received Encrypted Message:", encrypted_data)
         print("Decrypted Message:", decrypted_data)
 
